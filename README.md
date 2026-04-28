@@ -61,15 +61,80 @@ If you have the VRAM, go larger. The questions get noticeably sharper and more g
 
 ---
 
-## Setup
+## Install
 
-1. Install Marginalia from Community Plugins (or via [BRAT](https://github.com/TfTHacker/obsidian42-brat) for beta)
-2. Enable the plugin
-3. The setup wizard opens on first launch:
-   - Confirm the Ollama endpoint
-   - Pick your embedding and reasoning models
-4. Initial vault indexing runs in the background (a few minutes for ~700 notes)
-5. Start writing. Suggestions appear after a few seconds of pause.
+Marginalia is currently in **beta** and not yet listed in Obsidian's Community Plugins directory. Install via BRAT (recommended) or manually.
+
+### Option A: BRAT (recommended for beta)
+
+[BRAT](https://github.com/TfTHacker/obsidian42-brat) (Beta Reviewer's Auto-update Tester) is the standard way to install Obsidian plugins distributed via GitHub. It also handles auto-updates as new releases land.
+
+1. **Install BRAT**: `Settings` → `Community plugins` → `Browse` → search `BRAT` → install **Obsidian42 - BRAT** by TfTHacker → enable.
+2. **Add Marginalia**: `Settings` → `BRAT` → `Add Beta plugin` → paste:
+
+   ```
+   unco3/marginalia
+   ```
+
+   then click **Add Plugin**. BRAT downloads `main.js`, `manifest.json`, `styles.css` from the latest release into `<vault>/.obsidian/plugins/marginalia/`.
+3. **Enable Marginalia**: `Settings` → `Community plugins` → toggle **Marginalia** on.
+4. The setup wizard launches automatically. See [First-run setup](#first-run-setup) below.
+
+BRAT will check for updates at Obsidian startup. To force a check: command palette → `BRAT: Check for updates to all beta plugins`.
+
+To pin a specific version: in BRAT settings, edit Marginalia's entry and set a `Frozen version` (e.g. `0.1.0`).
+
+### Option B: Manual install
+
+1. Download `main.js`, `manifest.json`, `styles.css` from the [latest release](https://github.com/unco3/marginalia/releases/latest).
+2. Create `<vault>/.obsidian/plugins/marginalia/` and drop the three files in.
+3. In Obsidian: `Settings` → `Community plugins` → reload list → enable **Marginalia**.
+
+This route does not auto-update; you re-download files for each release.
+
+### First-run setup
+
+On first enable, a wizard opens:
+
+1. **Welcome** → Next.
+2. **Step 1/2 · Ollama connection**: enter your endpoint URL (default `http://localhost:11434`). Click **Test → Next**. You should see `✓ Connected · N models found`.
+3. **Step 2/2 · Choose models**: pick your embedding model (recommended `bge-m3`) and reasoning model (see the [tier table](#reasoning-model-tiers) above) from the dropdowns auto-populated from your Ollama instance.
+4. Click **Finish**. Initial vault indexing starts immediately. Progress shows in the right side panel (e.g. `indexing… 320/694`). For 500–1000 notes expect roughly one to a few minutes depending on hardware.
+
+Once indexing finishes, start writing. Suggestions appear after a brief pause.
+
+### Pre-flight: Ollama
+
+Before enabling Marginalia, make sure Ollama is running and has the models pulled:
+
+```bash
+# Required (embedding)
+ollama pull bge-m3
+
+# Reasoning model — pick one tier above your VRAM allows
+ollama pull qwen2.5:14b
+```
+
+If Ollama is not running:
+
+```bash
+ollama serve
+```
+
+(On most installs Ollama runs as a background service, so this is rarely needed.)
+
+### Troubleshooting
+
+- **BRAT: "Plugin not found" or no release error** — verify the repo string is exactly `unco3/marginalia` and that the [Releases page](https://github.com/unco3/marginalia/releases) lists at least one release with `main.js`, `manifest.json`, `styles.css` as assets.
+- **Indexing stuck at `0/N`** — Ollama is unreachable. Open the Obsidian developer console (`Cmd/Ctrl + Option + I`), filter by `Marginalia`, check the error. Adjust the endpoint in `Settings → Marginalia` and run `Marginalia: Rebuild index` from the command palette.
+- **Setup wizard doesn't appear** — wizard runs once. To re-open: command palette → `Marginalia: Open setup wizard`.
+- **"No active editor found" when clicking 🔄** — fixed in versions after `0.1.0`. Update via BRAT.
+
+### Uninstall
+
+1. `Settings` → `Community plugins` → toggle Marginalia off.
+2. `Settings` → `BRAT` → `Beta Plugin List` → click **Delete** next to Marginalia.
+3. Optionally remove `<vault>/.obsidian/plugins/marginalia/` to delete the embedding cache.
 
 ---
 
@@ -131,8 +196,9 @@ All settings are in **Settings → Marginalia**:
 
 ## Known limitations
 
-- **Latency**: Each round is 3 sequential LLM calls. With Qwen 7B-class models on a decent GPU, expect 15–40s for a full round. Use ⏸ if it interrupts your flow.
-- **UI is currently Japanese**. English UI is on the roadmap.
+- **Latency**: Each round is 3 sequential LLM calls. With streaming enabled the first question starts appearing within seconds, but the full round still takes 15–40s on warm 7B models. Use ⏸ if it interrupts your flow.
+- **Retrieval is embedding-only** for now. Candidate shortlist comes from `bge-m3` cosine top-K. The isomorphism lens, which wants structurally distant matches, is partially constrained by this. See [Roadmap](#roadmap).
+- **Settings UI is partly Japanese**. View, wizard, and command labels are English; settings tab descriptions are still mixed. Full English i18n is on the roadmap.
 - **Desktop only**. Mobile cannot reach a local LLM.
 - **Quality varies** with your reasoning model. Larger models give sharper, more grounded questions.
 
@@ -140,12 +206,18 @@ All settings are in **Settings → Marginalia**:
 
 ## Roadmap
 
-- [ ] English UI (i18n)
-- [ ] Per-lens enable/disable
-- [ ] Pinned history pane (save insights for later)
-- [ ] Per-lens "regenerate this one" action
-- [ ] Streamed responses (show tokens as they arrive)
-- [ ] MMR for candidate diversity (improve isomorphism lens)
+See [issue #1](https://github.com/unco3/marginalia/issues/1) for the full tracker.
+
+- [x] Streamed responses (tokens render as they arrive) — v0.2
+- [x] Lens reorder for fastest-first display — v0.2
+- [ ] Settings tab full English i18n — v0.2
+- [ ] Per-suggestion 👍/👎 feedback — v0.3
+- [ ] Abstract-summary embeddings (decouple "what it's about" from "what it does") — v0.3
+- [ ] MMR / random injection for candidate diversity — v0.3
+- [ ] Per-lens retrieval strategies — v0.3
+- [ ] Evaluation framework (planted structural pairs, recall measurement) — v0.4
+- [ ] Per-lens enable/disable, pinned history — later
+- [ ] Submission to Obsidian Community Plugins — v0.4
 
 ---
 
