@@ -81,6 +81,21 @@ export function buildMessages(
   ];
 }
 
+/** ストリーミング中の途中段階で `question` フィールドの値を取り出す。
+ * 出力は `{"question":"...","sourcePath":"...","reason":"...","evidence":"..."}` の形を
+ * 期待しているので、`"question": "` の直後から始まる文字列を、未エスケープの `"` 直前まで取る。
+ * クロージング `"` がまだ来ていなければ、現時点までの partial を返す。マッチしなければ null。
+ */
+export function extractPartialQuestion(raw: string): string | null {
+  const m = raw.match(/"question"\s*:\s*"((?:[^"\\]|\\.)*)/);
+  if (!m) return null;
+  // バックスラッシュエスケープを最低限ほどく（\" → ", \\ → \, \n → 改行）
+  return m[1]
+    .replace(/\\"/g, '"')
+    .replace(/\\n/g, "\n")
+    .replace(/\\\\/g, "\\");
+}
+
 /** マッチ判定用の積極的正規化:
  * - NFKC（全角/半角の統一）
  * - lowercase

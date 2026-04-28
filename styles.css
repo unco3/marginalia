@@ -116,6 +116,12 @@
   animation: marginalia-pulse 1.4s ease-in-out infinite;
 }
 
+.marginalia-streaming {
+  color: var(--text-normal);
+  font-style: normal;
+  animation: none;
+}
+
 @keyframes marginalia-pulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.85; }

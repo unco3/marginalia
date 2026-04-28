@@ -14,6 +14,7 @@ import { Debouncer } from "./debounce";
 import {
   buildMessages,
   evidenceMatchesExcerpt,
+  extractPartialQuestion,
   parseSuggestion,
   resolveCandidatePath,
 } from "./prompt";
@@ -348,12 +349,21 @@ export default class MarginaliaPlugin extends Plugin {
       }
       const messages = buildMessages(tail, filtered, this.settings.outputLanguage, lens);
       try {
+        let lastPartial = "";
         const reply = await this.client.chat(messages, this.settings.reasoningModel, {
           numCtx: this.settings.numCtx,
           temperature: 0.5,
           keepAliveSec: this.settings.keepAliveSec,
           thinking: this.settings.enableThinking,
           signal: ac.signal,
+          onChunk: (_chunk, accumulated) => {
+            if (ac.signal.aborted) return;
+            const partial = extractPartialQuestion(accumulated);
+            if (partial !== null && partial !== lastPartial) {
+              lastPartial = partial;
+              this.view?.updateSlotPartial(lens, partial);
+            }
+          },
         });
         if (ac.signal.aborted) {
           this.view?.skipPending("cancelled");

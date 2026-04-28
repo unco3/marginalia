@@ -36,17 +36,28 @@ Marginalia pushes the other way. The valuable connection is rarely the most sema
 
 - Obsidian **1.5.0+** (desktop only — relies on local network)
 - [Ollama](https://ollama.com/download) running somewhere reachable
-- Two Ollama models pulled:
-  - An embedding model — recommended: `bge-m3` (multilingual, 1.2GB)
-  - A reasoning model — recommended: `qwen2.5:7b` or larger (anything 7B+ works)
+- An embedding model: `bge-m3` recommended (multilingual, 1.2GB)
+- A reasoning model: see the tier table below
 
 ```bash
 ollama pull bge-m3
-ollama pull qwen2.5:7b
-# Or larger / MoE: qwen2.5:14b, qwen3:30b-a3b, etc.
+# Then pick a reasoning model that fits your VRAM:
+ollama pull qwen2.5:14b   # recommended baseline
 ```
 
 Ollama can run on the same machine (`http://localhost:11434`) or remotely via Tailscale / LAN.
+
+### Reasoning model tiers
+
+The reasoning model size has a large effect on suggestion quality, especially the **isomorphism** lens, which needs strong cross-domain abstraction.
+
+| Tier | Examples | What you get |
+|---|---|---|
+| Minimum (7B-class) | `qwen2.5:7b`, `llama3.1:8b`, `gemma2:9b` | Works. Contradiction lens is fine. Isomorphism is often weak or forced. |
+| Recommended (14B-32B-class) | `qwen2.5:14b`, `qwen2.5:32b`, `mistral-small:24b` | Reliable contradiction and recurrence. Isomorphism becomes hit-or-miss interesting. |
+| Best (MoE 30B+) | `qwen3:30b-a3b`, larger MoE variants | Sharp structural insights at MoE-level inference speed. |
+
+If you have the VRAM, go larger. The questions get noticeably sharper and more grounded.
 
 ---
 

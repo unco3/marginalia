@@ -228,6 +228,19 @@ export class MarginaliaView extends ItemView {
     this.refreshStatus();
   }
 
+  /** ストリーミング中、抽出された partial question テキストを pending スロットに表示する */
+  updateSlotPartial(lens: Lens, partial: string): void {
+    const state = this.slots.get(lens);
+    if (!state) return;
+    if (!state.el.hasClass("marginalia-pending")) return;
+    const questionEl = state.el.querySelector(".marginalia-question") as HTMLElement | null;
+    if (!questionEl) return;
+    questionEl.removeClass("marginalia-thinking");
+    questionEl.addClass("marginalia-streaming");
+    // カーソル風の仮表示で生きてる感を出す
+    questionEl.setText(partial + "▌");
+  }
+
   /** outer abort された時、pending スロットを「中断」表示にしてタイマーも停止 */
   skipPending(reason = "cancelled"): void {
     for (const [, state] of this.slots) {

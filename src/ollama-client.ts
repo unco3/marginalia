@@ -9,6 +9,9 @@ export interface ChatOptions {
   keepAliveSec?: number;
   thinking?: boolean;
   signal?: AbortSignal;
+  /** When provided, request will be streamed and this is called for each chunk.
+   * `chunk` is the new piece, `accumulated` is the full text so far. */
+  onChunk?: (chunk: string, accumulated: string) => void;
 }
 
 export class OllamaClient {
@@ -49,10 +52,11 @@ export class OllamaClient {
     opts: ChatOptions,
   ): Promise<string> {
     const url = `${this.endpoint.replace(/\/$/, "")}/api/chat`;
+    const streaming = !!opts.onChunk;
     const body: Record<string, unknown> = {
       model,
       messages,
-      stream: false,
+      stream: streaming,
       keep_alive: `${opts.keepAliveSec ?? 1800}s`,
       options: {
         num_ctx: opts.numCtx,
@@ -69,14 +73,54 @@ export class OllamaClient {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       },
-      300_000, // 5分 — cold model load + 長プロンプト時に 120s だと足りない
+      300_000, // 5min — cold model load + long prompts can exceed 120s
       opts.signal,
     );
     if (!res.ok) {
       throw new Error(`Ollama chat failed: ${res.status} ${await res.text()}`);
     }
-    const data = (await res.json()) as { message: { content: string } };
-    return data.message?.content ?? "";
+    if (!streaming) {
+      const data = (await res.json()) as { message: { content: string } };
+      return data.message?.content ?? "";
+    }
+    // Streaming path: NDJSON, one JSON object per line
+    if (!res.body) throw new Error("Ollama chat: no response body for stream");
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let accumulated = "";
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let newlineIdx: number;
+        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+          const line = buffer.slice(0, newlineIdx).trim();
+          buffer = buffer.slice(newlineIdx + 1);
+          if (!line) continue;
+          try {
+            const obj = JSON.parse(line) as {
+              message?: { content?: string };
+              done?: boolean;
+              error?: string;
+            };
+            if (obj.error) throw new Error(`Ollama stream error: ${obj.error}`);
+            const chunk = obj.message?.content;
+            if (chunk) {
+              accumulated += chunk;
+              opts.onChunk?.(chunk, accumulated);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) continue; // skip malformed line
+            throw e;
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock?.();
+    }
+    return accumulated;
   }
 
   async ping(): Promise<boolean> {
