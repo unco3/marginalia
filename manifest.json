@@ -1,0 +1,11 @@
+{
+  "id": "marginalia",
+  "name": "Marginalia",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "While you write, surface contradictions, structural homomorphisms, and repeated patterns from your past notes as one-line questions. Friction at the margin, not answers.",
+  "author": "gen",
+  "authorUrl": "",
+  "fundingUrl": "",
+  "isDesktopOnly": true
+}
