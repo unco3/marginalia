@@ -6,6 +6,8 @@ An Obsidian plugin that, while you write, surfaces past notes from your vault as
 
 Powered by a local LLM via [Ollama](https://ollama.com/). Your notes never leave your machine.
 
+[日本語 README](./README.ja.md)
+
 ---
 
 ## What it does
